@@ -4,6 +4,22 @@ import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 
+const generateAccessAndRefreshToken =  async(userId)=>{
+  try {
+    const user = await User.findById(userId)
+    const accessToken = user.generateAccessToken()
+    const refreshToken = user.generateRefreshToken()
+
+    user.refreshToken = refreshToken
+    await user.save({ validateBeforeSave:false })
+
+    return {accessToken,refreshToken}
+
+  } catch (error) {
+    throw new ApiError(500,"Something went wrong will generating token")
+  }
+}
+
 const registerUser = asyncHandler(async (req, res) => {
   const { username, email, fullname, password } = req.body;
 
@@ -22,10 +38,12 @@ const registerUser = asyncHandler(async (req, res) => {
 
   if (existedUser) throw new ApiError(409, "Username or Email already exists");
 
-  console.table(req.files)
+  console.table(req.files)// user route middleware
   console.log("Req.files: ", req.files);
   console.log("Req.files.avatar: ", req.files.avatar);
   console.log("Req.files.avatar: ", req.files.avatar[0]);
+
+
   const avatarLocalPath = req.files?.avatar[0]?.path;
 
   // const coverImageLocalPath = req.files?.coverImage[0]?.path;
@@ -39,7 +57,7 @@ const registerUser = asyncHandler(async (req, res) => {
 
   const avatar = await uploadOnCloudinary(avatarLocalPath)
    
-  const coverImage = await uploadOnCloudinary(coverImageLocalPath)
+  const coverImage = await uploadOnCloudinary(coverImageLocalPath) // if there is no coverImageLocalPaththe cloudinaryhandle this and not send any error
 
   if (!avatar) throw new ApiError(400, "Avatar file is required");
 
@@ -52,7 +70,7 @@ const registerUser = asyncHandler(async (req, res) => {
     username:username
   })
 
-  const createdUser = await User.findById(user._id).select("-password -refershToken") // rmove password and refreshToken from createdUser object
+  const createdUser = await User.findById(user._id).select("-password -refershToken") // we have to select the thing which we want remove, remove password and refreshToken from createdUser object.
   
    if(!createdUser)
  {
@@ -65,8 +83,88 @@ return res.status(201).json(
  
 });
 
-export { registerUser };
+const loginUser = asyncHandler(async(req,res)=>{
+     const {email,username,password} = req.body;
+     
+     if(!(username || email)) throw new ApiError(400,"username or email is required")
 
+      const existingUser = await User.findOne({
+        $or:[{ username },{ email }]
+      })
+
+      if(!existingUser) throw new ApiError(404,"User does not exists");
+
+      const isPasswordValid = await existingUser.isPasswordCorrect(password)
+
+      if(!isPasswordValid) throw new ApiError(401,"Ivalid user credentials");
+
+     const {accessToken,refreshToken} = await generateAccessAndRefreshToken(existingUser._id);
+
+     const loggedInUser = await User.findById(existingUser._id).select("-password -refershToken")
+     
+    const options = {
+      httpOnly:true,
+      secure:true
+    }
+
+    return res
+    .status(200)
+    .cookie("accessToken",accessToken,options)
+    .cookie("refershToken",refreshToken,options)
+    .json(
+      new ApiResponse(200,{
+        user: loggedInUser,
+        accessToken,
+        refreshToken
+      },
+      "User logged in successfully"
+    )
+    )
+
+})
+
+const logoutUser = asyncHandler(async(req,res)=>{
+      await User.findByIdAndUpdate(
+        req.user._id,
+      {
+        $set:{
+          refreshToken:undefined
+        }
+      },
+      {
+        new:true //return update value
+      }
+    )
+
+    const options = {
+      httpOnly:true,
+      secure:true
+    }
+
+    return res.status(200)
+    .clearCookie("accessToken",options)
+    .clearCookie("refershToken",options)
+    .json( new ApiResponse(200,{},"User Logged Out"))
+})
+
+export { 
+  registerUser,
+  loginUser,
+  logoutUser
+ };
+
+
+// ***********login user***************
+// 1.username or email and password from form 
+// 2.check all require things are present 
+// 3.find user
+// 4.password check
+// 5.send token in cookies
+// 5.if all things are present login the user
+
+
+
+// ***********register user**********
 // 1.  get user detail from frontend .
 // 2.  check all require things are present.
 // 3.  check email and username is unique.
