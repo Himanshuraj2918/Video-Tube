@@ -1,0 +1,19 @@
+
+
+services:
+  backend:
+    build: 
+        context: "."
+        dockerfile: Dockerfile
+    ports:
+        - 8000:8000
+    container_name: mega-chai-project-container
+    networks: 
+        - mega-project
+    volumes:
+        - .:/backend
+    env_file:
+      - .env
+
+networks:
+  mega-project:
