@@ -1,7 +1,7 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/user.model.js";
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import { uploadOnCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 
@@ -99,7 +99,7 @@ const loginUser = asyncHandler(async (req, res) => {
 
   const isPasswordValid = await existingUser.isPasswordCorrect(password);
 
-  if (!isPasswordValid) throw new ApiError(401, "Ivalid user credentials");
+  if (!isPasswordValid) throw new ApiError(401, "Invalid user credentials");
 
   const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
     existingUser._id
@@ -204,7 +204,9 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
 const changeCurrentPassword = asyncHandler(async (req, res) => {
   const { oldPassword, newPassword } = req.body;
-
+  console.log("Password",oldPassword);
+  console.log("New Password",newPassword);
+  
   const user = await User.findById(req.user?._id);
 
   const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
@@ -213,7 +215,7 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Invalid password");
   }
 
-  user.password = new password();
+  user.password = newPassword;
   await user.save({ validateBeforeSave: false });
 
   return res
@@ -251,6 +253,8 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
 });
 
 const updateUserAvatar = asyncHandler(async (req, res) => {
+  console.log(req.file);
+  
   const avatarLocalPath = req.file?.path;
 
   if (!avatarLocalPath) throw new ApiError(400, "Avatar file is missing");
@@ -259,6 +263,9 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
 
   if (!avatar.url) throw new ApiError(400, "Error while uploading on avatar");
 
+  const isDeleteFromCloud = await deleteFromCloudinary(req.user?.avatar)
+  console.log(isDeleteFromCloud);
+  
   const user = await User.findByIdAndUpdate(
     req.user?._id,
     {
@@ -286,6 +293,8 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
 
   if (!coverImage.url)
     throw new ApiError(400, "Error while uploading on cover image");
+
+  deleteFromCloudinary(req.user?.coverImageLocalPath)
 
   const user = await User.findByIdAndUpdate(
     req.user?._id,
