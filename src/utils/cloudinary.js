@@ -34,12 +34,12 @@ const deleteFromCloudinary = async(imageLink)=>{
       if(!imageLink) return null
         
       const publicId = imageLink.split('/').slice(-1)[0].split('.')[0]; //extracted public id from url
-      console.log(publicId);
+      // console.log(publicId);
       
       const value = await cloudinary.uploader.destroy(publicId,{
         invalidate: true, resource_type: "image"
         })
-        console.log(value);
+        // console.log(value);
         
       return true
   } catch (error) {

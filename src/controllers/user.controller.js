@@ -263,8 +263,8 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
 
   if (!avatar.url) throw new ApiError(400, "Error while uploading on avatar");
 
-  const isDeleteFromCloud = await deleteFromCloudinary(req.user?.avatar)
-  console.log(isDeleteFromCloud);
+  await deleteFromCloudinary(req.user?.avatar)
+  
   
   const user = await User.findByIdAndUpdate(
     req.user?._id,
@@ -294,7 +294,7 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
   if (!coverImage.url)
     throw new ApiError(400, "Error while uploading on cover image");
 
-  deleteFromCloudinary(req.user?.coverImageLocalPath)
+  await deleteFromCloudinary(req.user?.coverImageLocalPath)
 
   const user = await User.findByIdAndUpdate(
     req.user?._id,
