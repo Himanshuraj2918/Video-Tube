@@ -1,6 +1,6 @@
-# Video_tube
+# Video_Tube
 
-This based on MVC structure and in depth knowlede of Aggregation Pipeline, Multer, Coludinary and Complex Data Models. If you want to read more about the project read [Documentation](#documentation) below.
+This based on MVC structure and in depth knowledge of Aggregation Pipeline, Multer, Coludinary and Complex Data Models. If you want to read more about the project read [Documentation](#documentation) below.
 
 ## Tech Stack
 
